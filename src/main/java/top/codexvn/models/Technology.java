@@ -24,6 +24,7 @@ public class Technology implements Comparable<Technology> {
     public Float base_factor = 1.0f;
     public String base_weight;
     public String category;
+    public String categoryName;
     public Integer cost;
 
     public boolean is_dangerous;

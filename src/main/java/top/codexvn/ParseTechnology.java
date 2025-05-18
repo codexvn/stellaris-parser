@@ -1,11 +1,13 @@
 package top.codexvn;
 
+import java.awt.Color;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.StringJoiner;
 import java.util.stream.Collectors;
 
@@ -29,6 +31,33 @@ public class ParseTechnology {
     private static final Map<String, String> SCRIPTED_VARIABLES = new LinkedHashMap<>();
     private static final List<Technology> TECHNOLOGYS = new ArrayList<>();
     private static final ParseLocalisation.Localisation LOCALISATION = new ParseLocalisation.Localisation();
+    private static final Color dangerous = Color.decode("#741e1b");
+    private static final Color rare = Color.decode("#542d6b");
+    private static final Color physics = Color.decode("#316c8f");
+    private static final Color society = Color.decode("#276445");
+    private static final Color engineering = Color.decode("#6c411b");
+    private static final  Map<String, Color> colorMap = new LinkedHashMap<>() {
+        {
+            put("dangerous", dangerous);
+            put("rare", rare);
+            put("archaeostudies", rare);
+            put("biology", society);
+            put("voidcraft", engineering);
+            put("propulsion", engineering);
+            put("statecraft", society);
+            put("industry", engineering);
+            put("new_worlds", society);
+            put("field_manipulation", physics);
+            put("computing", physics);
+            put("materials", engineering);
+            put("psionics", society);
+            put("military_theory", society);
+            put("particles", physics);
+            put("physics", physics);
+            put("society", society);
+            put("engineering", engineering);
+        }
+    };
 
     public static void main(String[] args) throws Exception {
         //获取全局变量
@@ -62,17 +91,25 @@ public class ParseTechnology {
             String content = "%s_%s".formatted(name, level);
             name2NameWithLevel.put(technology.getKey(), content);
             StrBuilder strBuilder = new StrBuilder();
-            strBuilder.append("class %s[\"%s\"] {\n",key,name);
-            strBuilder.append("  类别: %s\n", technology.getCategory());
+            strBuilder.append("class %s[\"%s\"] {\n", key, name);
+            strBuilder.append("  类别: %s\n", technology.getCategoryName());
             strBuilder.append("  等级: %s\n", technology.getTier());
             strBuilder.append("  是否为稀有科技: %s\n", technology.is_rare() ? "是" : "否");
             strBuilder.append("  是否为危险科技: %s\n", technology.is_dangerous() ? "是" : "否");
             strBuilder.append("  是否为起始科技: %s\n", technology.is_start_tech() ? "是" : "否");
             for (int i = 0; i < technology.getPrerequisites().size(); i++) {
                 Pair<String, List<String>> prerequisitesCn = technology.getPrerequisites_names().get(i);
-                strBuilder.append("  解锁条件%s: (%s)\n",i+1, String.join(",", prerequisitesCn.getRight()));
+                strBuilder.append("  解锁条件%s: (%s)\n", i + 1, String.join(",", prerequisitesCn.getRight()));
             }
             strBuilder.append("}\n");
+            if (technology.is_dangerous()) {
+                strBuilder.append("  style %s stroke:%s,stroke-width:4px\n".formatted(key, toColorHex(dangerous)));
+            } else if (technology.is_rare()) {
+                strBuilder.append("  style %s stroke:%s,stroke-width:4px\n".formatted(key, toColorHex(rare)));
+            } else {
+                String category = technology.getCategory();
+                strBuilder.append("  style %s stroke:%s,stroke-width:4px\n".formatted(key, toColorHex(Objects.requireNonNull(colorMap.get(category)))));
+            }
             joiner.add(strBuilder.toString());
         }
         for (Technology technology : TECHNOLOGYS) {
@@ -175,7 +212,7 @@ public class ParseTechnology {
                 </body>
                 </html>
                 
-                """.replace("<mermaid_content>",joiner.toString());
+                """.replace("<mermaid_content>", joiner.toString());
     }
 
     public static TechnologyVisitor parseTechnology(String content) throws Exception {
@@ -185,6 +222,13 @@ public class ParseTechnology {
         TechnologyVisitor visitor = new TechnologyVisitor();
         visitor.visit(parser.technology());
         return visitor;
+    }
+
+    public static String toColorHex(Color color) {
+        return String.format("#%02x%02x%02x",
+                color.getRed(),
+                color.getGreen(),
+                color.getBlue());
     }
 
     public static String getMaybeScriptedVariable(String key) {
@@ -230,7 +274,8 @@ public class ParseTechnology {
         @Override
         public Void visitCategory_val(TechnologyParser.Category_valContext ctx) {
             String key = getMaybeScriptedVariable(ctx.val().getText());
-            thisDto.setCategory(LOCALISATION.getTitle().getOrDefault(key, key));
+            thisDto.setCategoryName(LOCALISATION.getTitle().getOrDefault(key, key));
+            thisDto.setCategory(key);
             return visitChildren(ctx);
         }
 
@@ -266,14 +311,14 @@ public class ParseTechnology {
 
         @Override
         public Void visitIs_rare_val(TechnologyParser.Is_rare_valContext ctx) {
-            thisDto.set_rare(Boolean.parseBoolean(getMaybeScriptedVariable(ctx.getText())));
+            thisDto.set_rare(getMaybeScriptedVariable(ctx.getText()).equals("yes"));
             return visitChildren(ctx);
         }
 
         @Override
         public Void visitIs_dangerous_val(TechnologyParser.Is_dangerous_valContext ctx) {
             log.info("visitIs_dangerous: " + getMaybeScriptedVariable(ctx.getText()));
-            thisDto.set_dangerous(Boolean.parseBoolean(getMaybeScriptedVariable(ctx.getText())));
+            thisDto.set_dangerous(getMaybeScriptedVariable(ctx.getText()).equals("yes"));
             return visitChildren(ctx);
         }
 
@@ -391,7 +436,7 @@ public class ParseTechnology {
         @Override
         public Void visitStart_tech_val(TechnologyParser.Start_tech_valContext ctx) {
             log.info("visitStart_tech: " + getMaybeScriptedVariable(ctx.getText()));
-            thisDto.set_start_tech(Boolean.parseBoolean(getMaybeScriptedVariable(ctx.getText())));
+            thisDto.set_start_tech(getMaybeScriptedVariable(ctx.getText()).equals("yes"));
             return visitChildren(ctx);
         }
 
