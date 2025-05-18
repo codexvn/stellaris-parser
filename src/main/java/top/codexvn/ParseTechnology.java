@@ -7,6 +7,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.StringJoiner;
+import java.util.stream.Collectors;
 
 import common.technology.TechnologyBaseVisitor;
 import common.technology.TechnologyLexer;
@@ -19,6 +20,7 @@ import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.text.StrBuilder;
 import org.apache.commons.lang3.tuple.Pair;
 import top.codexvn.models.Technology;
 
@@ -46,7 +48,7 @@ public class ParseTechnology {
             }
         }
         String s = outputMermaid();
-        FileUtils.writeStringToFile(new File("preview.html"), s, "UTF-8");
+        FileUtils.writeStringToFile(new File("technology_tree_4.x.html"), s, "UTF-8");
         System.gc();
     }
 
@@ -54,18 +56,31 @@ public class ParseTechnology {
         StringJoiner joiner = new StringJoiner("\n");
         Map<String, String> name2NameWithLevel = new LinkedHashMap<>();
         for (Technology technology : TECHNOLOGYS) {
+            String key = technology.getKey();
             String name = technology.getName();
             String level = String.valueOf(technology.getTier());
             String content = "%s_%s".formatted(name, level);
             name2NameWithLevel.put(technology.getKey(), content);
+            StrBuilder strBuilder = new StrBuilder();
+            strBuilder.append("class %s[\"%s\"] {\n",key,name);
+            strBuilder.append("  类别: %s\n", technology.getCategory());
+            strBuilder.append("  等级: %s\n", technology.getTier());
+            strBuilder.append("  是否为稀有科技: %s\n", technology.is_rare() ? "是" : "否");
+            strBuilder.append("  是否为危险科技: %s\n", technology.is_dangerous() ? "是" : "否");
+            strBuilder.append("  是否为起始科技: %s\n", technology.is_start_tech() ? "是" : "否");
+            for (int i = 0; i < technology.getPrerequisites().size(); i++) {
+                Pair<String, List<String>> prerequisitesCn = technology.getPrerequisites_names().get(i);
+                strBuilder.append("  解锁条件%s: (%s)\n",i+1, String.join(",", prerequisitesCn.getRight()));
+            }
+            strBuilder.append("}\n");
+            joiner.add(strBuilder.toString());
         }
         for (Technology technology : TECHNOLOGYS) {
-            String name = technology.getName();
             String key = technology.getKey();
             List<Pair<String, List<String>>> prerequisitesNames = technology.getPrerequisites();
             for (Pair<String, List<String>> item : prerequisitesNames) {
                 for (String prerequisitesKey : item.getRight()) {
-                    String content = "  %s[%s] --> %s[%s]".formatted(prerequisitesKey, name2NameWithLevel.get(prerequisitesKey),key,name2NameWithLevel.get(key));
+                    String content = "  %s ..> %s".formatted(prerequisitesKey, key);
                     joiner.add(content);
                 }
             }
@@ -102,7 +117,8 @@ public class ParseTechnology {
                 <body>
                   <div id="container">
                     <div id="zoom-area" class="mermaid">
-                      graph LR
+                      classDiagram
+                        direction LR
                         <mermaid_content>
                     </div>
                   </div>
@@ -111,7 +127,8 @@ public class ParseTechnology {
                     import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
                     mermaid.initialize({
                       startOnLoad: true,
-                      maxEdges: 5000  // 支持大图
+                      maxEdges: 5000,  // 支持大图
+                      maxTextSize: 1000000
                     });
                   </script>
                 
