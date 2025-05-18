@@ -99,7 +99,7 @@ public class ParseTechnology {
             strBuilder.append("  是否为起始科技: %s\n", technology.is_start_tech() ? "是" : "否");
             for (int i = 0; i < technology.getPrerequisites().size(); i++) {
                 Pair<String, List<String>> prerequisitesCn = technology.getPrerequisites_names().get(i);
-                strBuilder.append("  解锁条件%s: (%s)\n", i + 1, String.join(",", prerequisitesCn.getRight()));
+                strBuilder.append("  必要条件%s: %s(%s)\n", i + 1,prerequisitesCn.getLeft() ,String.join(",", prerequisitesCn.getRight()));
             }
             strBuilder.append("}\n");
             if (technology.is_dangerous()) {
