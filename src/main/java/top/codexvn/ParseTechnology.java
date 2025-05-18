@@ -1,19 +1,13 @@
 package top.codexvn;
 
 import java.io.File;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.StringJoiner;
-import java.util.stream.Collectors;
 
-import common.technology.TechnologyBaseListener;
 import common.technology.TechnologyBaseVisitor;
 import common.technology.TechnologyLexer;
 import common.technology.TechnologyParser;
@@ -21,13 +15,8 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.extern.slf4j.Slf4j;
 import org.antlr.v4.runtime.ANTLRErrorListener;
-import org.antlr.v4.runtime.BaseErrorListener;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
-import org.antlr.v4.runtime.RecognitionException;
-import org.antlr.v4.runtime.Recognizer;
-import org.antlr.v4.runtime.misc.ParseCancellationException;
-import org.antlr.v4.runtime.tree.ParseTreeWalker;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -86,24 +75,90 @@ public class ParseTechnology {
                 <html>
                 <head>
                   <meta charset="utf-8" />
-                  <title>Mermaid Graph Viewer</title>
+                  <title>Mermaid Graph - Left to Right with Zoom</title>
+                  <style>
+                    body {
+                      margin: 0;
+                      overflow: hidden;
+                    }
+                    #container {
+                      width: 100vw;
+                      height: 100vh;
+                      overflow: hidden;
+                      background: #f9f9f9;
+                      position: relative;
+                    }
+                    #zoom-area {
+                      width: 100%;
+                      height: 100%;
+                      transform-origin: 0 0;
+                      cursor: grab;
+                    }
+                    .mermaid {
+                      font-family: 'Segoe UI', sans-serif;
+                    }
+                  </style>
+                </head>
+                <body>
+                  <div id="container">
+                    <div id="zoom-area" class="mermaid">
+                      graph LR
+                        <mermaid_content>
+                    </div>
+                  </div>
+                
                   <script type="module">
                     import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
                     mermaid.initialize({
                       startOnLoad: true,
-                      maxEdges: 5000  // 自定义边数上限
+                      maxEdges: 5000  // 支持大图
                     });
                   </script>
-                </head>
-                <body>
-                  <div class="mermaid">
-                    graph LR
-                      %s
-                  </div>
+                
+                  <script>
+                    // 缩放和平移功能
+                    const zoomArea = document.getElementById("zoom-area");
+                    let scale = 1;
+                    let originX = 0, originY = 0;
+                    let isDragging = false;
+                    let startX, startY;
+                
+                    document.addEventListener("wheel", function (e) {
+                      e.preventDefault();
+                      const zoomFactor = 0.1;
+                      if (e.deltaY < 0) {
+                        scale *= (1 + zoomFactor);
+                      } else {
+                        scale *= (1 - zoomFactor);
+                      }
+                      zoomArea.style.transform = `translate(${originX}px, ${originY}px) scale(${scale})`;
+                    }, { passive: false });
+                
+                    zoomArea.addEventListener("mousedown", (e) => {
+                      isDragging = true;
+                      startX = e.clientX;
+                      startY = e.clientY;
+                      zoomArea.style.cursor = "grabbing";
+                    });
+                
+                    document.addEventListener("mouseup", () => {
+                      isDragging = false;
+                      zoomArea.style.cursor = "grab";
+                    });
+                
+                    document.addEventListener("mousemove", (e) => {
+                      if (!isDragging) return;
+                      originX += e.clientX - startX;
+                      originY += e.clientY - startY;
+                      startX = e.clientX;
+                      startY = e.clientY;
+                      zoomArea.style.transform = `translate(${originX}px, ${originY}px) scale(${scale})`;
+                    });
+                  </script>
                 </body>
                 </html>
                 
-                """.formatted(joiner.toString());
+                """.replace("<mermaid_content>",joiner.toString());
     }
 
     public static TechnologyVisitor parseTechnology(String content) throws Exception {

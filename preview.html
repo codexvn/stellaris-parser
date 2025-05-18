@@ -2,19 +2,35 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Mermaid Graph Viewer</title>
-  <script type="module">
-    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
-    mermaid.initialize({
-      startOnLoad: true,
-      maxEdges: 5000  // 自定义边数上限
-    });
-  </script>
+  <title>Mermaid Graph - Left to Right with Zoom</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+    }
+    #container {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: #f9f9f9;
+      position: relative;
+    }
+    #zoom-area {
+      width: 100%;
+      height: 100%;
+      transform-origin: 0 0;
+      cursor: grab;
+    }
+    .mermaid {
+      font-family: 'Segoe UI', sans-serif;
+    }
+  </style>
 </head>
 <body>
-  <div class="mermaid">
-    graph LR
-        tech_archaeostudies[远古学_2] --> tech_archaeoshield[远古延留力场_3]
+  <div id="container">
+    <div id="zoom-area" class="mermaid">
+      graph LR
+          tech_archaeostudies[远古学_2] --> tech_archaeoshield[远古延留力场_3]
   tech_archaeostudies[远古学_2] --> tech_archaeoarmor[远古脉冲装甲_3]
   tech_archaeostudies[远古学_2] --> tech_archaeo_detection_scrambler[远古索敌扰频器_4]
   tech_archaeostudies[远古学_2] --> tech_archaeo_titan_beam[远古湮灭眩光_4]
@@ -585,7 +601,57 @@
   tech_galactic_administration[星系管理_3] --> tech_mega_assembly[巨型装配系统_4]
   tech_adaptive_combat_algorithms[自适应作战算法_2] --> tech_biomechanics[生物力学_4]
   tech_micro_replicators[微型复制机_2] --> tech_self_assembling_components[自动组装部件_3]
+    </div>
   </div>
+
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    mermaid.initialize({
+      startOnLoad: true,
+      maxEdges: 5000  // 支持大图
+    });
+  </script>
+
+  <script>
+    // 缩放和平移功能
+    const zoomArea = document.getElementById("zoom-area");
+    let scale = 1;
+    let originX = 0, originY = 0;
+    let isDragging = false;
+    let startX, startY;
+
+    document.addEventListener("wheel", function (e) {
+      e.preventDefault();
+      const zoomFactor = 0.1;
+      if (e.deltaY < 0) {
+        scale *= (1 + zoomFactor);
+      } else {
+        scale *= (1 - zoomFactor);
+      }
+      zoomArea.style.transform = `translate(${originX}px, ${originY}px) scale(${scale})`;
+    }, { passive: false });
+
+    zoomArea.addEventListener("mousedown", (e) => {
+      isDragging = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      zoomArea.style.cursor = "grabbing";
+    });
+
+    document.addEventListener("mouseup", () => {
+      isDragging = false;
+      zoomArea.style.cursor = "grab";
+    });
+
+    document.addEventListener("mousemove", (e) => {
+      if (!isDragging) return;
+      originX += e.clientX - startX;
+      originY += e.clientY - startY;
+      startX = e.clientX;
+      startY = e.clientY;
+      zoomArea.style.transform = `translate(${originX}px, ${originY}px) scale(${scale})`;
+    });
+  </script>
 </body>
 </html>
 
