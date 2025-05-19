@@ -1,6 +1,6 @@
 grammar Localisation;
 
-localisation:
+root:
     language_type COLON
     localisation_item* EOF
     | EOF

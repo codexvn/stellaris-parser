@@ -155,7 +155,7 @@ public class ParseLocalisation {
                 return super.visitTitle_desc_val(ctx);
             }
         };
-        visitor.visit(parser.localisation());
+        visitor.visit(parser.root());
         return result;
     }
 }

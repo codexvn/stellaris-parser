@@ -1,6 +1,7 @@
 grammar Technology;
 //https://stellaris.paradoxwikis.com/Technology_modding
-technology
+//https://ck3.paradoxwikis.com/Scripting#Documentation
+root
     : (technology_item | variable_item|inline_script_modifier)* EOF
     ;
 variable_item
@@ -22,6 +23,27 @@ keywork
     | 'component_technology'
     | 'ship_technology'
     ;
+
+//trigger分为两种,普通trigger和script_trigger
+//参数为对象的一定是script_trigger
+trigger_expr:
+    script_trigger_key ASSIGN arg_object
+    | trigger_or_script_trigger_key ASSIGN arg_val
+    | LOGICAL_OPERATORS ASSIGN arg_object
+    ;
+trigger_or_script_trigger_key:
+    key;
+script_trigger_key:
+    key;
+//调用script_trigger时使用的命名参数 {a=b}
+arg_object: LBRACE named_arg* RBRACE;
+// a=b
+named_arg: arg_name ASSIGN arg_val;
+arg_name: key;
+arg_val: val| call_script_trigger;
+call_script_trigger: '"'id_'"';
+
+
 technology_body_start
     : LBRACE
     ;
@@ -223,7 +245,7 @@ compare_condition_expr: value_compare_condition_expr| object_compare_condition_e
 //在列表中
 in_condition_expr:  id_+;
 //用于数据的比较
-value_compare_condition_expr: condition_key value_compare val;
+value_compare_condition_expr: condition_key RELATIONAL_OPERATORS val;
 //条件块条件表达式
 object_compare_condition_expr: condition_key ASSIGN condition_statement;
 //是否在数组中
@@ -284,6 +306,15 @@ LOGICAL_OPERATORS
     | NOT
     | NOR
     ;
+RELATIONAL_OPERATORS
+    : ASSIGN
+    | GT
+    | LT
+    | GE
+    | LE
+    | NEQ
+    ;
+
 IDENTIFIER
     : IDENITIFIERHEAD IDENITIFIERBODY*
     ;
@@ -309,14 +340,7 @@ fragment IDENITIFIERBODY
     | [0-9_]
     ;
 
-value_compare
-    : ASSIGN
-    |  GT
-   |  LT
-     | GE
-     | LE
-    |  NEQ
-    ;
+
 
 // 运算符
 EQUALS    : '==';

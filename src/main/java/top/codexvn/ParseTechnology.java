@@ -223,7 +223,7 @@ public class ParseTechnology {
         TechnologyParser parser = new TechnologyParser(new CommonTokenStream(lexer));
         List<? extends ANTLRErrorListener> errorListeners = parser.getErrorListeners();
         TechnologyVisitor visitor = new TechnologyVisitor();
-        visitor.visit(parser.technology());
+        visitor.visit(parser.root());
         return visitor;
     }
 

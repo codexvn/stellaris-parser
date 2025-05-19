@@ -54,7 +54,7 @@ public class ParseScriptedVariables {
                 return super.visitVariable_key(ctx);
             }
         };
-        visitor.visit(parser.scripted_variables());
+        visitor.visit(parser.root());
         return result;
     }
 }

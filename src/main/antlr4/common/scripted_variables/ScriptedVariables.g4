@@ -1,6 +1,6 @@
 grammar ScriptedVariables;
 
-scripted_variables
+root
     : variable_item* EOF
     ;
 
