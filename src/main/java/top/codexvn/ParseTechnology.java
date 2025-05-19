@@ -41,20 +41,23 @@ public class ParseTechnology {
             put("dangerous", dangerous);
             put("rare", rare);
             put("archaeostudies", rare);
-            put("biology", society);
-            put("voidcraft", engineering);
-            put("propulsion", engineering);
-            put("statecraft", society);
-            put("industry", engineering);
-            put("new_worlds", society);
+
             put("field_manipulation", physics);
             put("computing", physics);
-            put("materials", engineering);
-            put("psionics", society);
-            put("military_theory", society);
             put("particles", physics);
             put("physics", physics);
+
+            put("biology", society);
+            put("statecraft", society);
+            put("new_worlds", society);
+            put("psionics", society);
+            put("military_theory", society);
             put("society", society);
+
+            put("industry", engineering);
+            put("voidcraft", engineering);
+            put("propulsion", engineering);
+            put("materials", engineering);
             put("engineering", engineering);
         }
     };
@@ -281,13 +284,11 @@ public class ParseTechnology {
 
         @Override
         public Void visitIcon_val(TechnologyParser.Icon_valContext ctx) {
-            log.warn("visitIcon: " + getMaybeScriptedVariable(ctx.getText()));
             return visitChildren(ctx);
         }
 
         @Override
         public Void visitModifier_val(TechnologyParser.Modifier_valContext ctx) {
-            log.warn("visitModifier: " + getMaybeScriptedVariable(ctx.getText()));
             return visitChildren(ctx);
         }
 
@@ -299,13 +300,11 @@ public class ParseTechnology {
 
         @Override
         public Void visitCost_by_script_val(TechnologyParser.Cost_by_script_valContext ctx) {
-            log.warn("visitCost_by_script: " + getMaybeScriptedVariable(ctx.getText()));
             return visitChildren(ctx);
         }
 
         @Override
         public Void visitCost_per_level_val(TechnologyParser.Cost_per_level_valContext ctx) {
-            log.warn("visitCost_per_level: " + getMaybeScriptedVariable(ctx.getText()));
             return visitChildren(ctx);
         }
 
@@ -317,28 +316,26 @@ public class ParseTechnology {
 
         @Override
         public Void visitIs_dangerous_val(TechnologyParser.Is_dangerous_valContext ctx) {
-            log.info("visitIs_dangerous: " + getMaybeScriptedVariable(ctx.getText()));
             thisDto.set_dangerous(getMaybeScriptedVariable(ctx.getText()).equals("yes"));
             return visitChildren(ctx);
         }
 
         @Override
         public Void visitWeight_val1(TechnologyParser.Weight_val1Context ctx) {
-            log.info("visitWeight: " + getMaybeScriptedVariable(ctx.getText()));
             thisDto.setBase_weight(getMaybeScriptedVariable(ctx.getText()));
             return visitChildren(ctx);
         }
 
         @Override
         public Void visitWeight_val2(TechnologyParser.Weight_val2Context ctx) {
-            log.info("visitWeight: " + getMaybeScriptedVariable(ctx.getText()));
             thisDto.setBase_weight(getMaybeScriptedVariable(ctx.getText()));
             return visitChildren(ctx);
         }
 
+
+
         @Override
         public Void visitLevels_val(TechnologyParser.Levels_valContext ctx) {
-            log.info("visitLevels: " + getMaybeScriptedVariable(ctx.getText()));
             return visitChildren(ctx);
         }
 
@@ -347,12 +344,12 @@ public class ParseTechnology {
             List<Pair<String, List<String>>> preRequisites = new ArrayList<>();
             List<Pair<String, List<String>>> preRequisitesCn = new ArrayList<>();
             for (TechnologyParser.Condition_exprContext firstCondition : ctx.condition_statement().condition_expr()) {
-                if (firstCondition.in_array() != null) {
+                if (firstCondition.in_condition_expr() != null) {
                     //数组
-                    Pair<String, List<String>> requisites = Pair.of("", firstCondition.in_array().id_().stream()
+                    Pair<String, List<String>> requisites = Pair.of("", firstCondition.in_condition_expr().id_().stream()
                             .map(id -> StringUtils.strip(id.getText(), "\"")).toList());
                     preRequisites.add(requisites);
-                    Pair<String, List<String>> requisitesCn = Pair.of("", firstCondition.in_array().id_().stream()
+                    Pair<String, List<String>> requisitesCn = Pair.of("", firstCondition.in_condition_expr().id_().stream()
                             .map(id -> StringUtils.strip(id.getText(), "\""))
                             .map(i ->
                                     LOCALISATION.getTitle().get(i)
@@ -360,16 +357,23 @@ public class ParseTechnology {
                     preRequisitesCn.add(requisitesCn);
                 } else if (firstCondition.op_condition_expr() != null) {
                     //走条件代码块
-                    Pair<String, List<String>> requisites = Pair.of(firstCondition.op_condition_expr().LOGICAL_OPERATORS().getText(), new ArrayList<>());
-                    Pair<String, List<String>> requisitesCn = Pair.of(firstCondition.op_condition_expr().LOGICAL_OPERATORS().getText(), new ArrayList<>());
+                    String opCn = switch (firstCondition.op_condition_expr().LOGICAL_OPERATORS().getText()){
+                        case "AND" -> "同时满足所有条件";
+                        case "OR" -> "满足任意一个条件";
+                        case "NOT" -> "不满足所有条件";
+                        case "NOR" -> "不满足以下任何一个条件";
+                        default -> throw new IllegalStateException("Unexpected value: " + firstCondition.op_condition_expr().LOGICAL_OPERATORS().getText());
+                    };
+                    Pair<String, List<String>> requisites = Pair.of(opCn, new ArrayList<>());
+                    Pair<String, List<String>> requisitesCn = Pair.of(opCn, new ArrayList<>());
                     for (TechnologyParser.Condition_exprContext secondCondition : firstCondition.op_condition_expr()
                             .condition_statement().condition_expr()) {
-                        if (secondCondition.in_array() != null) {
+                        if (secondCondition.in_condition_expr() != null) {
                             //数组
-                            requisites.getRight().addAll(secondCondition.in_array().id_().stream()
+                            requisites.getRight().addAll(secondCondition.in_condition_expr().id_().stream()
                                     .map(id -> StringUtils.strip(id.getText(), "\""))
                                     .toList());
-                            requisitesCn.getRight().addAll((secondCondition.in_array().id_().stream()
+                            requisitesCn.getRight().addAll((secondCondition.in_condition_expr().id_().stream()
                                     .map(id -> StringUtils.strip(id.getText(), "\""))
                                     .map(i ->
                                             LOCALISATION.getTitle().get(i)
@@ -399,92 +403,87 @@ public class ParseTechnology {
 
         @Override
         public Void visitTechnology_swap_val(TechnologyParser.Technology_swap_valContext ctx) {
-            log.info("visitTechnology_swap: " + getMaybeScriptedVariable(ctx.getText()));
             return visitChildren(ctx);
         }
 
         @Override
         public Void visitPotential_val(TechnologyParser.Potential_valContext ctx) {
-            log.info("visitPotential: " + getMaybeScriptedVariable(ctx.getText()));
             return visitChildren(ctx);
         }
 
         @Override
         public Void visitGateway_val(TechnologyParser.Gateway_valContext ctx) {
-            log.info("visitGateway: " + getMaybeScriptedVariable(ctx.getText()));
             return visitChildren(ctx);
         }
 
         @Override
         public Void visitRepeatable_val(TechnologyParser.Repeatable_valContext ctx) {
-            log.info("visitRepeatable: " + getMaybeScriptedVariable(ctx.getText()));
             return visitChildren(ctx);
         }
 
         @Override
         public Void visitWeight_groups_val(TechnologyParser.Weight_groups_valContext ctx) {
-            log.info("visitWeight_groups: " + getMaybeScriptedVariable(ctx.getText()));
             return visitChildren(ctx);
         }
 
         @Override
         public Void visitMod_weight_if_group_picked_val(TechnologyParser.Mod_weight_if_group_picked_valContext ctx) {
-            log.info("visitMod_weight_if_group_picked: " + getMaybeScriptedVariable(ctx.getText()));
             return visitChildren(ctx);
         }
 
         @Override
         public Void visitStart_tech_val(TechnologyParser.Start_tech_valContext ctx) {
-            log.info("visitStart_tech: " + getMaybeScriptedVariable(ctx.getText()));
             thisDto.set_start_tech(getMaybeScriptedVariable(ctx.getText()).equals("yes"));
             return visitChildren(ctx);
         }
 
         @Override
         public Void visitIs_reverse_engineerable_val(TechnologyParser.Is_reverse_engineerable_valContext ctx) {
-            log.info("visitIs_reverse_engineerable: " + getMaybeScriptedVariable(ctx.getText()));
             return visitChildren(ctx);
         }
 
         @Override
         public Void visitAi_update_type_val(TechnologyParser.Ai_update_type_valContext ctx) {
-            log.info("visitAi_update_type: " + getMaybeScriptedVariable(ctx.getText()));
             return visitChildren(ctx);
         }
 
         @Override
         public Void visitIs_insight_val(TechnologyParser.Is_insight_valContext ctx) {
-            log.info("visitIs_insight: " + getMaybeScriptedVariable(ctx.getText()));
             return visitChildren(ctx);
         }
 
         @Override
         public Void visitFeature_flags_val(TechnologyParser.Feature_flags_valContext ctx) {
-            log.info("visitFeature_flags: " + getMaybeScriptedVariable(ctx.getText()));
             return visitChildren(ctx);
         }
 
         @Override
         public Void visitPrereqfor_desc_val(TechnologyParser.Prereqfor_desc_valContext ctx) {
-            log.info("visitPrereqfor_desc: " + getMaybeScriptedVariable(ctx.getText()));
             return visitChildren(ctx);
         }
 
         @Override
         public Void visitWeight_modifier_val(TechnologyParser.Weight_modifier_valContext ctx) {
-            log.info("visitWeight_modifier: " + getMaybeScriptedVariable(ctx.getText()));
+            if (ctx.modifier() != null) {
+                for (TechnologyParser.ModifierContext modifierContext: ctx.modifier()) {
+                    var modifier = modifierContext.modifier_val();
+                    List<TechnologyParser.AddContext> adds = modifier.add();
+                    List<TechnologyParser.FactorContext> factors = modifier.factor();
+                    for (TechnologyParser.Compare_condition_exprContext compareConditionExprContext : modifier.compare_condition_expr()) {
+                        
+                    }
+                }
+            }
             return visitChildren(ctx);
         }
 
         @Override
         public Void visitAi_weight_val(TechnologyParser.Ai_weight_valContext ctx) {
-            log.info("visitAi_weight: " + getMaybeScriptedVariable(ctx.getText()));
             return visitChildren(ctx);
         }
 
         @Override
         public Void visitStarting_potential_val(TechnologyParser.Starting_potential_valContext ctx) {
-            log.info("visitStarting_potential: " + getMaybeScriptedVariable(ctx.getText()));
             return visitChildren(ctx);
         }
     }
