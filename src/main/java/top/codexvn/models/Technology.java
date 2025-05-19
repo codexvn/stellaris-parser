@@ -25,7 +25,7 @@ public class Technology implements Comparable<Technology> {
     public String base_weight;
     public String category;
     public String categoryName;
-    public Integer cost;
+    public Integer cost = 0;
 
     public boolean is_dangerous;
     public boolean is_rare = false;

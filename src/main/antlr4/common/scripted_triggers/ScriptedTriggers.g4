@@ -1,5 +1,5 @@
 grammar ScriptedTriggers;
-
+//https://stellaris.paradoxwikis.com/Conditions
 root
     : (trigger_item|variable_item)* EOF
     ;
@@ -11,31 +11,46 @@ trigger_item:
     trigger_name ASSIGN trigger_body
 ;
 trigger_name: ID;
-trigger_body: LBRACE trigger_body_item* RBRACE;
-trigger_body_item:
-      logical_expr
-    | object_compare_expr
-    | value_compare_expr
-    | if_else_expr
-    | switch_expr
-    | val
+trigger_body: trigger_body_start logical_block_expr* trigger_body_end;
+trigger_body_start
+    : LBRACE
+    ;
+trigger_body_end
+    : RBRACE
+    ;
+logical_block_expr: value_compare_expr|object_compare_expr|logical_expr|if_else_expr|switch_expr|array_compare_expr_val|conditional_macroblock;
+block_start
+    : LBRACE
+    ;
+block_end
+    : RBRACE
     ;
 //条件宏
-conditional_macroblock: LBRACKET LBRACKET BANG? key RBRACKET trigger_item  RBRACKET;
-
-
+conditional_macroblock: LBRACKET LBRACKET BANG? key RBRACKET trigger_item RBRACKET;
 //a=b
-value_compare_expr: key relational_operators val;
+value_compare_expr: value_compare_expr_key relational_operators value_compare_expr_val;
+value_compare_expr_key: key;
+value_compare_expr_val: val;
 //a={b=c}
 //a={a b}
-object_compare_expr: key ASSIGN LBRACE (value_compare_expr|object_compare_expr|logical_expr|if_else_expr|switch_expr|val|conditional_macroblock)* RBRACE;
+object_compare_expr: object_compare_expr_key ASSIGN object_compare_expr_val ;
+object_compare_expr_key: key;
+object_compare_expr_val: block_start logical_block_expr* block_end;
+array_compare_expr_val: val;
 //逻辑门运算
 // OR { A=C }
-logical_expr: logical_operators ASSIGN LBRACE (value_compare_expr|object_compare_expr|logical_expr|if_else_expr|switch_expr|val|conditional_macroblock)* RBRACE ;
+logical_expr: logical_expr_key ASSIGN logical_expr_val  ;
+logical_expr_key: logical_operators;
+logical_expr_val: block_start logical_block_expr* block_end;
 //条件运算
 // if { A=C }
-if_else_expr: if_else_key ASSIGN LBRACE (value_compare_expr|object_compare_expr|logical_expr|if_else_expr|switch_expr|val|conditional_macroblock)* RBRACE;
-switch_expr: switch_key ASSIGN LBRACE (value_compare_expr|object_compare_expr|logical_expr|if_else_expr|switch_expr|val|conditional_macroblock)* RBRACE;
+if_else_expr: if_else_expr_key ASSIGN if_else_expr_val;
+if_else_expr_key: IF| ELSE_IF| ELSE;
+if_else_expr_val: block_start logical_block_expr* block_end;
+switch_expr: switch_expr_key ASSIGN switch_expr_val;
+switch_expr_key: SWITCH;
+switch_expr_val: block_start logical_block_expr* block_end;
+
 
 
 
@@ -60,6 +75,7 @@ logical_operators
     | OR
     | NOT
     | NOR
+    | NAND
     ;
 relational_operators
     : ASSIGN
@@ -69,14 +85,7 @@ relational_operators
     | LE
     | NEQ
     ;
-if_else_key
-    : IF
-    | ELSE_IF
-    | ELSE
-    ;
-switch_key
-    : SWITCH
-    ;
+
 
 key
     : ID
@@ -113,6 +122,7 @@ OR       : 'OR';
 AND      : 'AND';
 NOT      : 'NOT';
 NOR      : 'NOR';
+NAND     : 'NAND';
 
 BOOLEAN: YES | NO;
 YES      : 'yes';
@@ -175,6 +185,9 @@ STRING
 
 COMMENT
     : '#' ~[\r\n]* -> channel(HIDDEN)
+    ;
+LOGGING
+    : 'log' ~[\r\n]* -> channel(HIDDEN)
     ;
 
 SPACE

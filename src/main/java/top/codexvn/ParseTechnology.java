@@ -2,6 +2,7 @@ package top.codexvn;
 
 import java.awt.Color;
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -21,6 +22,7 @@ import org.antlr.v4.runtime.ANTLRErrorListener;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.text.StrBuilder;
 import org.apache.commons.lang3.tuple.Pair;
@@ -64,6 +66,7 @@ public class ParseTechnology {
 
     public static void main(String[] args) throws Exception {
         //获取全局变量
+        byte[] UTF8_BOM = {(byte) 0xEF, (byte) 0xBB, (byte) 0xBF};
         SCRIPTED_VARIABLES.putAll(ParseScriptedVariables.run());
         ParseLocalisation.Localisation localisation = ParseLocalisation.run();
         LOCALISATION.getTitle().putAll(localisation.getTitle());
@@ -79,11 +82,83 @@ public class ParseTechnology {
                 TECHNOLOGYS.addAll(a.getAllTechnologies());
             }
         }
+        String treeDesc = buildTree();
         String s = outputMermaid();
-        FileUtils.writeStringToFile(new File("technology_tree_4.x.html"), s, "UTF-8");
+        Pair<String, String> i18Replace = i18Replace();
+        FileUtils.writeStringToFile(new File("gen/technology_tree_4.x.html"), s, "UTF-8");
+        FileUtils.writeStringToFile(new File("gen/technology_tree_4.x.html"), s, "UTF-8");
+//        FileUtils.writeByteArrayToFile(new File("gen/localisation/simp_chinese/techtree_title_l_simp_chinese.yml"),
+//                ArrayUtils.addAll(UTF8_BOM, i18Replace.getKey().getBytes(StandardCharsets.UTF_8)));
+        FileUtils.writeByteArrayToFile(new File("gen/localisation/simp_chinese/replace/techtree_title_l_simp_chinese.yml"),
+                ArrayUtils.addAll(UTF8_BOM, i18Replace.getKey().getBytes(StandardCharsets.UTF_8)));
+//        FileUtils.writeByteArrayToFile(new File("gen/localisation/simp_chinese/techtree_desc_l_simp_chinese.yml"),
+//                ArrayUtils.addAll(UTF8_BOM,i18Replace.getValue().getBytes(StandardCharsets.UTF_8)));
+        FileUtils.writeByteArrayToFile(new File("gen/localisation/simp_chinese/replace/techtree_desc_l_simp_chinese.yml"),
+                ArrayUtils.addAll(UTF8_BOM,i18Replace.getValue().getBytes(StandardCharsets.UTF_8)));
+//        FileUtils.writeByteArrayToFile(new File("gen/localisation/simp_chinese/techtree_l_simp_chinese.yml"),
+//                ArrayUtils.addAll(UTF8_BOM,treeDesc.getBytes(StandardCharsets.UTF_8)));
+        FileUtils.writeByteArrayToFile(new File("gen/localisation/simp_chinese/replace/techtree_l_simp_chinese.yml"),
+                ArrayUtils.addAll(UTF8_BOM,treeDesc.getBytes(StandardCharsets.UTF_8)));
         System.gc();
     }
+    public static String buildTree() {
+        Map<String, Technology> key2Technology = TECHNOLOGYS.stream()
+                .collect(Collectors.toMap(Technology::getKey, i -> i));
+        for (Technology technology : TECHNOLOGYS) {
+            List<Pair<String, List<String>>> prerequisites = technology.getPrerequisites();
+            for (Pair<String, List<String>> prerequisite : prerequisites) {
+                for (String key : prerequisite.getRight()) {
+                    Technology parent = key2Technology.get(key);
+                    if (parent != null) {
+                        parent.getChildren().add(technology);
+                    }
+                }
+            }
+        }
+        StringJoiner allTreeDescSJ = new StringJoiner("\n");
+        Map<String,StringJoiner> treeMap = new LinkedHashMap<>();
 
+        //递归树,然后输出文本树
+        for (Technology  technology: TECHNOLOGYS) {
+            StringJoiner treeDescSJ = new StringJoiner("\n");
+            dfs(technology,1,treeDescSJ);
+            String suffix = "_techtree";
+            String key = technology.getKey()+suffix;
+            treeMap.put(key,treeDescSJ);
+        }
+        allTreeDescSJ.add("l_simp_chinese:");
+        for (Map.Entry<String, StringJoiner> entry : treeMap.entrySet()) {
+            String key = entry.getKey();
+            StringJoiner treeDescSJ = entry.getValue();
+            allTreeDescSJ.add(" %s: \"%s\"".formatted(key, treeDescSJ.toString().replace("\n","\\n")));
+        }
+        return allTreeDescSJ.toString();
+    }
+    public static void dfs(Technology technology, int level,StringJoiner joiner) {
+        String prefix = "   |".repeat(level);
+        String levelStr = "(级别%s)".formatted(technology.getTier());
+        joiner.add("%s--%s".formatted(prefix, technology.getName()+levelStr));
+        for (Technology child : technology.getChildren()) {
+            dfs(child, level + 1, joiner);
+        }
+    }
+
+
+    public static Pair<String,String> i18Replace(){
+        StringJoiner titleSJ = new StringJoiner("\n");
+        titleSJ.add("l_simp_chinese:");
+        String techtreeSuffix = "_techtree";
+        String descSuffix = "_desc";
+        StringJoiner descSJ = new StringJoiner("\n");
+        descSJ.add("l_simp_chinese:");
+        for (Technology technology : TECHNOLOGYS) {
+            String level = "(级别%s)".formatted(technology.getTier());
+            String key = technology.getKey();
+            titleSJ.add(" %s: \"%s\"".formatted(key, technology.getName()+level));
+            descSJ.add(" %s: \"%s\"".formatted(key + descSuffix, technology.getDescription()+"\\n科技树:\\n$%s$\\n".formatted(key+techtreeSuffix)));
+        }
+        return Pair.of(titleSJ.toString(),descSJ.toString());
+    }
     public static String outputMermaid() {
         StringJoiner joiner = new StringJoiner("\n");
         Map<String, String> name2NameWithLevel = new LinkedHashMap<>();
@@ -273,6 +348,12 @@ public class ParseTechnology {
             return visitChildren(ctx);
         }
 
+        @Override
+        public Void visitArea_val(TechnologyParser.Area_valContext ctx) {
+            String key = getMaybeScriptedVariable(ctx.technology_area_enum().getText());
+            thisDto.setArea(key);
+            return super.visitArea_val(ctx);
+        }
 
         @Override
         public Void visitCategory_val(TechnologyParser.Category_valContext ctx) {

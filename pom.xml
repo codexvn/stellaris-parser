@@ -17,6 +17,7 @@
         <commons-lang3.version>3.17.0</commons-lang3.version>
         <commons-io.version>2.19.0</commons-io.version>
         <slf4j.version>2.0.17</slf4j.version>
+        <easyexcel.version>4.0.3</easyexcel.version>
     </properties>
     <dependencies>
         <dependency>
@@ -49,6 +50,12 @@
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-simple</artifactId>
             <version>${slf4j.version}</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/com.alibaba/easyexcel -->
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>easyexcel</artifactId>
+            <version>${easyexcel.version}</version>
         </dependency>
     </dependencies>
     <build>
