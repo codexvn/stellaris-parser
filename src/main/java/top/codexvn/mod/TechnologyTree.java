@@ -5,9 +5,11 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.StringJoiner;
 import java.util.stream.Collectors;
 
@@ -35,6 +37,20 @@ import top.codexvn.models.Technology;
 public class TechnologyTree {
     private static final Map<String, String> SCRIPTED_VARIABLES = new LinkedHashMap<>();
     private static final byte[] UTF8_BOM = {(byte) 0xEF, (byte) 0xBB, (byte) 0xBF};
+    private static final Map<LocalisationEnum, String> LEVEL_LOCALISATION_PATTERN = new HashMap<>() {
+        {
+            put(LocalisationEnum.ENGLISH, "level_%s");
+            put(LocalisationEnum.BRAZ_POR, "nivel_%s");
+            put(LocalisationEnum.GERMAN, "stufe_%s");
+            put(LocalisationEnum.FRENCH, "niveau_%s");
+            put(LocalisationEnum.SPANISH, "nivel_%s");
+            put(LocalisationEnum.POLISH, "poziom_%s");
+            put(LocalisationEnum.RUSSIAN, "уровень_%s");
+            put(LocalisationEnum.SIMP_CHINESE, "等级%s");
+            put(LocalisationEnum.JAPANESE, "レベル%s");
+            put(LocalisationEnum.KOREAN, "레벨%s");
+        }
+    };
 
     public static void main(String[] args) throws Exception {
         //获取全局变量
@@ -51,27 +67,26 @@ public class TechnologyTree {
                 //读取文件内容
                 String content = FileUtils.readFileToString(file, "UTF-8");
                 if (StringUtils.isNotBlank(content)) {
-                    var a = parseTechnology(content,localisationEnum,localisation);
+                    var a = parseTechnology(content, localisationEnum, localisation);
                     technologies.addAll(a.getAllTechnologies());
                 }
             }
             //输出mod科技树
-            Pair<String, String> i18Replace = i18Replace(technologies,localisationEnum);
-            FileUtils.writeByteArrayToFile(new File("gen/localisation/%s/replace/techtree_title_%s.yml".formatted(localisationEnum.getDirName(),localisationEnum.getValue())),
+            Pair<String, String> i18Replace = i18Replace(technologies, localisationEnum);
+            FileUtils.writeByteArrayToFile(new File("gen/localisation/%s/replace/techtree_title_%s.yml".formatted(localisationEnum.getDirName(), localisationEnum.getValue())),
                     ArrayUtils.addAll(UTF8_BOM, i18Replace.getKey().getBytes(StandardCharsets.UTF_8)));
-            FileUtils.writeByteArrayToFile(new File("gen/localisation/%s/replace/techtree_desc_%s.yml".formatted(localisationEnum.getDirName(),localisationEnum.getValue())),
-                    ArrayUtils.addAll(UTF8_BOM,i18Replace.getValue().getBytes(StandardCharsets.UTF_8)));
-            String treeDesc = buildTree(technologies,localisationEnum);
-            FileUtils.writeByteArrayToFile(new File("gen/localisation/%s/replace/techtree_%s.yml".formatted(localisationEnum.getDirName(),localisationEnum.getValue())),
-                    ArrayUtils.addAll(UTF8_BOM,treeDesc.getBytes(StandardCharsets.UTF_8)));
+            FileUtils.writeByteArrayToFile(new File("gen/localisation/%s/replace/techtree_desc_%s.yml".formatted(localisationEnum.getDirName(), localisationEnum.getValue())),
+                    ArrayUtils.addAll(UTF8_BOM, i18Replace.getValue().getBytes(StandardCharsets.UTF_8)));
+            String treeDesc = buildTree(technologies, localisationEnum);
+            FileUtils.writeByteArrayToFile(new File("gen/localisation/%s/replace/techtree_%s.yml".formatted(localisationEnum.getDirName(), localisationEnum.getValue())),
+                    ArrayUtils.addAll(UTF8_BOM, treeDesc.getBytes(StandardCharsets.UTF_8)));
         }
-
 
 
         System.gc();
     }
 
-    public static String buildTree(List<Technology> technologies,LocalisationEnum localisationEnum) {
+    public static String buildTree(List<Technology> technologies, LocalisationEnum localisationEnum) {
         Map<String, Technology> key2Technology = technologies.stream()
                 .collect(Collectors.toMap(Technology::getKey, i -> i));
         for (Technology technology : technologies) {
@@ -86,55 +101,57 @@ public class TechnologyTree {
             }
         }
         StringJoiner allTreeDescSJ = new StringJoiner("\n");
-        Map<String,StringJoiner> treeMap = new LinkedHashMap<>();
+        Map<String, StringJoiner> treeMap = new LinkedHashMap<>();
 
         //递归树,然后输出文本树
-        for (Technology  technology: technologies) {
+        for (Technology technology : technologies) {
             StringJoiner treeDescSJ = new StringJoiner("\n");
-            dfs(technology,1,treeDescSJ);
+            dfs(technology, 1, Objects.requireNonNull(LEVEL_LOCALISATION_PATTERN.get(localisationEnum)), treeDescSJ);
             String suffix = "_techtree";
-            String key = technology.getKey()+suffix;
-            treeMap.put(key,treeDescSJ);
+            String key = technology.getKey() + suffix;
+            treeMap.put(key, treeDescSJ);
         }
-        allTreeDescSJ.add("%s:".formatted(localisationEnum.getName()));
+        allTreeDescSJ.add("%s:".formatted(localisationEnum.getValue()));
         for (Map.Entry<String, StringJoiner> entry : treeMap.entrySet()) {
             String key = entry.getKey();
             StringJoiner treeDescSJ = entry.getValue();
-            allTreeDescSJ.add(" %s: \"%s\"".formatted(key, treeDescSJ.toString().replace("\n","\\n")));
+            allTreeDescSJ.add(" %s: \"%s\"".formatted(key, treeDescSJ.toString().replace("\n", "\\n")));
         }
         return allTreeDescSJ.toString();
     }
-    public static void dfs(Technology technology, int level,StringJoiner joiner) {
+
+    public static void dfs(Technology technology, int level, String levelPattern, StringJoiner joiner) {
         String prefix = "   |".repeat(level);
-        String levelStr = "(级别%s)".formatted(technology.getTier());
-        joiner.add("%s--%s".formatted(prefix, technology.getName()+levelStr));
+        String levelStr = "(%s)".formatted(levelPattern.formatted(technology.getTier()));
+        joiner.add("%s--%s".formatted(prefix, technology.getName() + levelStr));
         for (Technology child : technology.getChildren()) {
-            dfs(child, level + 1, joiner);
+            dfs(child, level + 1, levelPattern, joiner);
         }
     }
 
 
-    public static Pair<String,String> i18Replace(List<Technology> technologies,LocalisationEnum localisationEnum){
+    public static Pair<String, String> i18Replace(List<Technology> technologies, LocalisationEnum localisationEnum) {
         StringJoiner titleSJ = new StringJoiner("\n");
-        titleSJ.add("%s:".formatted(localisationEnum.getName()));
+        titleSJ.add("%s:".formatted(localisationEnum.getValue()));
         String techtreeSuffix = "_techtree";
         String descSuffix = "_desc";
         StringJoiner descSJ = new StringJoiner("\n");
-        descSJ.add("%s:".formatted(localisationEnum.getName()));
+        descSJ.add("%s:".formatted(localisationEnum.getValue()));
         for (Technology technology : technologies) {
-            String level = "(级别%s)".formatted(technology.getTier());
+            String level = "(%s)".formatted(Objects.requireNonNull(LEVEL_LOCALISATION_PATTERN.get(localisationEnum))
+                    .formatted(technology.getTier()));
             String key = technology.getKey();
-            titleSJ.add(" %s: \"%s\"".formatted(key, technology.getName()+level));
-            descSJ.add(" %s: \"%s\"".formatted(key + descSuffix, technology.getDescription()+"\\n科技树:\\n$%s$\\n".formatted(key+techtreeSuffix)));
+            titleSJ.add(" %s: \"%s\"".formatted(key, technology.getName() + level));
+            descSJ.add(" %s: \"%s\"".formatted(key + descSuffix, technology.getDescription() + "\\n科技树:\\n$%s$\\n".formatted(key + techtreeSuffix)));
         }
-        return Pair.of(titleSJ.toString(),descSJ.toString());
+        return Pair.of(titleSJ.toString(), descSJ.toString());
     }
 
-    public static TechnologyVisitor parseTechnology(String content,LocalisationEnum localisationEnum,ParseLocalisation.Localisation localisation) throws Exception {
+    public static TechnologyVisitor parseTechnology(String content, LocalisationEnum localisationEnum, ParseLocalisation.Localisation localisation) throws Exception {
         TechnologyLexer lexer = new TechnologyLexer(CharStreams.fromString(content));
         TechnologyParser parser = new TechnologyParser(new CommonTokenStream(lexer));
         List<? extends ANTLRErrorListener> errorListeners = parser.getErrorListeners();
-        TechnologyVisitor visitor = new TechnologyVisitor(localisationEnum,localisation);
+        TechnologyVisitor visitor = new TechnologyVisitor(localisationEnum, localisation);
         visitor.visit(parser.root());
         return visitor;
     }
@@ -248,7 +265,6 @@ public class TechnologyTree {
         }
 
 
-
         @Override
         public Void visitLevels_val(TechnologyParser.Levels_valContext ctx) {
             return visitChildren(ctx);
@@ -272,12 +288,13 @@ public class TechnologyTree {
                     preRequisitesCn.add(requisitesCn);
                 } else if (firstCondition.op_condition_expr() != null) {
                     //走条件代码块
-                    String opCn = switch (firstCondition.op_condition_expr().LOGICAL_OPERATORS().getText()){
+                    String opCn = switch (firstCondition.op_condition_expr().LOGICAL_OPERATORS().getText()) {
                         case "AND" -> "同时满足所有条件";
                         case "OR" -> "满足任意一个条件";
                         case "NOT" -> "不满足所有条件";
                         case "NOR" -> "不满足以下任何一个条件";
-                        default -> throw new IllegalStateException("Unexpected value: " + firstCondition.op_condition_expr().LOGICAL_OPERATORS().getText());
+                        default ->
+                                throw new IllegalStateException("Unexpected value: " + firstCondition.op_condition_expr().LOGICAL_OPERATORS().getText());
                     };
                     Pair<String, List<String>> requisites = Pair.of(opCn, new ArrayList<>());
                     Pair<String, List<String>> requisitesCn = Pair.of(opCn, new ArrayList<>());
@@ -380,7 +397,7 @@ public class TechnologyTree {
         @Override
         public Void visitWeight_modifier_val(TechnologyParser.Weight_modifier_valContext ctx) {
             if (ctx.modifier() != null) {
-                for (TechnologyParser.ModifierContext modifierContext: ctx.modifier()) {
+                for (TechnologyParser.ModifierContext modifierContext : ctx.modifier()) {
                     var modifier = modifierContext.modifier_val();
                     List<TechnologyParser.AddContext> adds = modifier.add();
                     List<TechnologyParser.FactorContext> factors = modifier.factor();
