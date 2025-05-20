@@ -22,6 +22,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.ClassLoaderUtils;
 import org.apache.commons.lang3.ClassUtils;
 import org.apache.commons.lang3.StringUtils;
+import top.codexvn.models.LocalisationEnum;
 
 @Slf4j
 public class ParseScriptedTriggers {
@@ -39,7 +40,7 @@ public class ParseScriptedTriggers {
         String filePath = ".game_files/common/scripted_triggers";
         //列出所有文件
         Collection<File> files = FileUtils.listFiles(new File(filePath), new String[]{"txt"}, false);
-        ParseLocalisation.Localisation localisation = ParseLocalisation.run();
+        ParseLocalisation.Localisation localisation = ParseLocalisation.run().get(LocalisationEnum.SIMP_CHINESE);
         Map<String, String> variables = ParseScriptedVariables.run();
         Map<String, String> customI18 = new LinkedHashMap<>(){
             {

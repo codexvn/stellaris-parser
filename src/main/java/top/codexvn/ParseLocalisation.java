@@ -1,7 +1,10 @@
 package top.codexvn;
 
 import java.io.File;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -15,11 +18,13 @@ import localisation.LocalisationLexer;
 import localisation.LocalisationParser;
 import localisation.LocalisationVisitor;
 import lombok.Data;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
+import top.codexvn.models.LocalisationEnum;
 
 @Slf4j
 public class ParseLocalisation {
@@ -31,6 +36,7 @@ public class ParseLocalisation {
         private Set<String> titleNeedUpdate = new HashSet<>();
         private Set<String> descNeedUpdate = new HashSet<>();
     }
+
     private static final Pattern REF_PATTERN = Pattern.compile("\\$[a-zA-Z0-9_\\-.\"]+\\$");
 
     public static void main(String[] args) throws Exception {
@@ -38,9 +44,19 @@ public class ParseLocalisation {
         log.info(run.toString());
     }
 
-    public static Localisation run() throws Exception {
+    public static Map<LocalisationEnum, Localisation> run() throws Exception {
+        Map<LocalisationEnum, Localisation> result = Collections.synchronizedMap(new HashMap<>());
+        Arrays.stream(LocalisationEnum.values()).parallel().forEach(localisationEnum -> {
+            Localisation localisation = doRun(localisationEnum);
+            result.put(localisationEnum, localisation);
+        });
+        return result;
+    }
+
+    @SneakyThrows
+    public static Localisation doRun(LocalisationEnum localisation){
         Localisation result = new Localisation();
-        String filePath = ".game_files/localisation/simp_chinese";
+        String filePath = ".game_files/localisation/%s".formatted(localisation.getDirName());
         //列出所有文件
         Collection<File> files = FileUtils.listFiles(new File(filePath), new String[]{"yml"}, false);
         for (File file : files) {
@@ -56,8 +72,8 @@ public class ParseLocalisation {
         //更新引用
         Set<String> updatedTitle = new HashSet<>();
         Set<String> updatedDesc = new HashSet<>();
-        boolean titleUpdated = false;
-        boolean descUpdated = false;
+        boolean titleUpdated;
+        boolean descUpdated;
         while (!(result.getDescNeedUpdate().isEmpty() && result.getTitleNeedUpdate().isEmpty())) {
             for (String key : result.getTitleNeedUpdate()) {
                 String value = result.getTitle().get(key);
@@ -101,7 +117,7 @@ public class ParseLocalisation {
                     updatedDesc.add(key);
                 }
             }
-          descUpdated =   result.getDescNeedUpdate().removeAll(updatedDesc);
+            descUpdated = result.getDescNeedUpdate().removeAll(updatedDesc);
             if (!descUpdated & !titleUpdated) {
                 break;
             }
