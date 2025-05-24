@@ -294,6 +294,7 @@ public class ParseTechnology {
         TechnologyParser parser = new TechnologyParser(new CommonTokenStream(lexer));
         List<? extends ANTLRErrorListener> errorListeners = parser.getErrorListeners();
         TechnologyVisitor visitor = new TechnologyVisitor();
+//        Trees.inspect(parser.root(), parser);
         visitor.visit(parser.root());
         return visitor;
     }
@@ -346,8 +347,8 @@ public class ParseTechnology {
 
         @Override
         public Void visitArea_val(TechnologyParser.Area_valContext ctx) {
-            String key = getMaybeScriptedVariable(ctx.technology_area_enum().getText());
-            thisDto.setArea(key);
+            String val = getMaybeScriptedVariable(ctx.val().getText());
+            thisDto.setArea(val);
             return super.visitArea_val(ctx);
         }
 
@@ -415,6 +416,7 @@ public class ParseTechnology {
         public Void visitLevels_val(TechnologyParser.Levels_valContext ctx) {
             return visitChildren(ctx);
         }
+
 
         @Override
         public Void visitPrerequisites_val(TechnologyParser.Prerequisites_valContext ctx) {

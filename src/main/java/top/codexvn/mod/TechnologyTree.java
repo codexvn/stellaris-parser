@@ -1,6 +1,5 @@
 package top.codexvn.mod;
 
-import java.awt.Color;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -16,7 +15,6 @@ import java.util.stream.Collectors;
 import common.technology.TechnologyBaseVisitor;
 import common.technology.TechnologyLexer;
 import common.technology.TechnologyParser;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +25,6 @@ import org.antlr.v4.runtime.CommonTokenStream;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.text.StrBuilder;
 import org.apache.commons.lang3.tuple.Pair;
 import top.codexvn.ParseLocalisation;
 import top.codexvn.ParseScriptedVariables;
@@ -201,8 +198,8 @@ public class TechnologyTree {
 
         @Override
         public Void visitArea_val(TechnologyParser.Area_valContext ctx) {
-            String key = getMaybeScriptedVariable(ctx.technology_area_enum().getText());
-            thisDto.setArea(key);
+            String val = getMaybeScriptedVariable(ctx.val().getText());
+            thisDto.setArea(val);
             return super.visitArea_val(ctx);
         }
 

@@ -1,12 +1,9 @@
 package top.codexvn;
 
 import java.io.File;
-import java.io.InputStream;
 import java.util.Collection;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 import com.alibaba.excel.EasyExcel;
 import com.alibaba.excel.support.ExcelTypeEnum;
@@ -19,8 +16,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang3.ClassLoaderUtils;
-import org.apache.commons.lang3.ClassUtils;
 import org.apache.commons.lang3.StringUtils;
 import top.codexvn.models.LocalisationEnum;
 
@@ -91,7 +86,6 @@ public class ParseScriptedTriggers {
             }
             @Override
             public Void visitTrigger_body_end(ScriptedTriggersParser.Trigger_body_endContext ctx) {
-                log.info(sb.toString());
                 sb = new StringBuilder();
                 return super.visitTrigger_body_end(ctx);
             }

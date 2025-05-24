@@ -2,19 +2,16 @@ package top.codexvn.models;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
 import lombok.Data;
+import lombok.ToString;
 import org.apache.commons.lang3.tuple.Pair;
 
 @Data
+@ToString
 public class Technology implements Comparable<Technology> {
     public String key;
     public String name;
@@ -62,11 +59,11 @@ public class Technology implements Comparable<Technology> {
 
         if (this == that) return EQUAL;
         if (this.equals(that)) return EQUAL;
-
-        if(this.key.equals("tech_bio_reactor") || that.key.equals("tech_bio_reactor")) {
-            System.out.println(this + " vs " + that);
-
-        }
+//
+//        if(this.key.equals("tech_bio_reactor") || that.key.equals("tech_bio_reactor")) {
+//            System.out.println(this + " vs " + that);
+//
+//        }
         int comparison = EQUAL;
 
         if(that.children.size() == 0 && this.children.size() > 0) comparison = -1;
